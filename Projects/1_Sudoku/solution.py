@@ -1,20 +1,17 @@
-
 from utils import *
-
 
 row_units = [cross(r, cols) for r in rows]
 column_units = [cross(rows, c) for c in cols]
 square_units = [cross(rs, cs) for rs in ('ABC','DEF','GHI') for cs in ('123','456','789')]
-unitlist = row_units + column_units + square_units
 
-# TODO: Update the unit list to add the new diagonal units
-unitlist = unitlist
+# Update the unit list to add the new diagonal units
+diagonal_units = [['A1', 'B2', 'C3', 'D4', 'E5', 'F6', 'G7', 'H8', 'I9'], ['A9', 'B8', 'C7', 'D6', 'E5', 'F4', 'G3', 'H2', 'I1']]
 
+unitlist = row_units + column_units + square_units + diagonal_units
 
 # Must be called after all units (including diagonals) are added to the unitlist
 units = extract_units(unitlist, boxes)
 peers = extract_peers(units, boxes)
-
 
 def naked_twins(values):
     """Eliminate values using the naked twins strategy.
@@ -53,9 +50,23 @@ def naked_twins(values):
     Pseudocode for this algorithm on github:
     https://github.com/udacity/artificial-intelligence/blob/master/Projects/1_Sudoku/pseudocode.md
     """
-    # TODO: Implement this function!
-    raise NotImplementedError
 
+    for unit in unitlist:
+        unit_values = [values[box] for box in unit]
+        twins = [box for box in unit if len(values[box]) == 2 and unit_values.count(values[box]) > 1]
+        if len(twins) > 0:
+            #eliminate twins from all other boxes in unit
+            twin = twins[0]
+            for digit in values[twin]:
+                for box in unit:
+                    if box in twins or not digit in values[box]:
+                        continue
+                    values[box] = values[box].replace(digit, "")
+
+                    # if not check_valid(values):
+                    #     print("naked_twins invalid!")
+
+    return values
 
 def eliminate(values):
     """Apply the eliminate strategy to a Sudoku puzzle
@@ -73,9 +84,18 @@ def eliminate(values):
     dict
         The values dictionary with the assigned values eliminated from peers
     """
-    # TODO: Copy your code from the classroom to complete this function
-    raise NotImplementedError
 
+    solved = []
+    for box in values.keys():
+        if len(values[box]) == 1:
+            solved.append(box)
+            
+    for s in solved:
+        number = values[s]
+        for peer in peers[s]:
+            values[peer] = values[peer].replace(number, '')
+        
+    return values
 
 def only_choice(values):
     """Apply the only choice strategy to a Sudoku puzzle
@@ -97,9 +117,16 @@ def only_choice(values):
     -----
     You should be able to complete this function by copying your code from the classroom
     """
-    # TODO: Copy your code from the classroom to complete this function
-    raise NotImplementedError
 
+    for unit in unitlist:
+        for digit in '123456789':
+            dplaces = [box for box in unit if digit in values[box]]
+            if len(dplaces) == 1:
+                values[dplaces[0]] = digit
+                # if not check_valid(values):
+                #     print("only_choice invalid!")
+
+    return values
 
 def reduce_puzzle(values):
     """Reduce a Sudoku puzzle by repeatedly applying all constraint strategies
@@ -115,8 +142,31 @@ def reduce_puzzle(values):
         The values dictionary after continued application of the constraint strategies
         no longer produces any changes, or False if the puzzle is unsolvable 
     """
-    # TODO: Copy your code from the classroom and modify it to complete this function
-    raise NotImplementedError
+    stalled = False
+    while not stalled:
+        # Check how many boxes have a determined value
+        solved_values_before = len([box for box in values.keys() if len(values[box]) == 1])
+
+        # Use the Eliminate Strategy
+        values = eliminate(values)
+
+        # Use the Only Choice Strategy
+        values = only_choice(values)
+
+        # Use the Naked Twins Strategy
+        values = naked_twins(values)
+
+        # Check how many boxes have a determined value, to compare
+        solved_values_after = len([box for box in values.keys() if len(values[box]) == 1])
+
+        # If no new values were added, stop the loop.
+        stalled = solved_values_before == solved_values_after
+
+        # Sanity check, return False if there is a box with zero available values:
+        if len([box for box in values.keys() if len(values[box]) == 0]):
+            return False
+
+    return values
 
 
 def search(values):
@@ -138,9 +188,21 @@ def search(values):
     You should be able to complete this function by copying your code from the classroom
     and extending it to call the naked twins strategy.
     """
-    # TODO: Copy your code from the classroom to complete this function
-    raise NotImplementedError
 
+    values = reduce_puzzle(values)
+    if values is False:
+        return False ## Failed earlier
+    if all(len(values[s]) == 1 for s in values.keys()): 
+        return values ## Solved!
+    # Choose one of the unfilled squares with the fewest possibilities
+    n,s = min((len(values[s]), s) for s in values.keys() if len(values[s]) > 1)
+    # Now use recurrence to solve each one of the resulting sudokus, and 
+    for value in values[s]:
+        new_sudoku = values.copy()
+        new_sudoku[s] = value
+        attempt = search(new_sudoku)
+        if attempt:
+            return attempt
 
 def solve(grid):
     """Find the solution to a Sudoku puzzle using search and constraint propagation
@@ -162,15 +224,53 @@ def solve(grid):
     return values
 
 
+def check_valid(values):
+    """Checks if the grid is valid (helper function)
+
+    Parameters
+    ----------
+    values(dict)
+        a dictionary of the form {'box_name': '123456789', ...}
+
+    Returns
+    -------
+    Bool
+        Indicating whether grid is valid or not
+    """
+
+    for unit in unitlist:
+        for box in unit:
+            if len(values[box]) == 0:
+                return False
+    
+    for unit in unitlist:
+        boxesToCheck = [box for box in unit if len(values[box]) == 1]
+        for firstBox in boxesToCheck:
+            for otherBox in boxesToCheck:
+                if firstBox == otherBox:
+                    continue
+
+                if values[firstBox] == values[otherBox]:
+                    return False
+    
+    return True
+
+
 if __name__ == "__main__":
     diag_sudoku_grid = '2.............62....1....7...6..8...3...9...7...6..4...4....8....52.............3'
     display(grid2values(diag_sudoku_grid))
     result = solve(diag_sudoku_grid)
     display(result)
+    
+    #grid2 = '4.....8.5.3..........7......2.....6.....8.4......1.......6.3.7.5..2.....1.4......'
+    grid2 = '6.5.3.4.....59.......16...5........1...3......7.6859......53....5............6.5.'
+    values = grid2values(grid2)
+    result = solve(grid2)
+    display(result)
 
     try:
         import PySudoku
-        PySudoku.play(grid2values(diag_sudoku_grid), result, history)
+        PySudoku.play(grid2values(grid2), result, history)
 
     except SystemExit:
         pass

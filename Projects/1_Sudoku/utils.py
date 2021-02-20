@@ -1,12 +1,9 @@
-
 from collections import defaultdict
-
 
 rows = 'ABCDEFGHI'
 cols = '123456789'
 boxes = [r + c for r in rows for c in cols]
 history = {}  # history must be declared here so that it exists in the assign_values scope
-
 
 def extract_units(unitlist, boxes):
     """Initialize a mapping from box names to the units that the boxes belong to
@@ -142,7 +139,6 @@ def grid2values(grid):
         else:
             sudoku_grid[key] = val
     return sudoku_grid
-
 
 def display(values):
     """Display the values as a 2-D grid.
