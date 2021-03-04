@@ -196,7 +196,7 @@ def search(values):
         return values ## Solved!
     # Choose one of the unfilled squares with the fewest possibilities
     n,s = min((len(values[s]), s) for s in values.keys() if len(values[s]) > 1)
-    # Now use recurrence to solve each one of the resulting sudokus, and 
+    # Now use recurrence to solve each one of the resulting sudokus 
     for value in values[s]:
         new_sudoku = values.copy()
         new_sudoku[s] = value
