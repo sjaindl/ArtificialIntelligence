@@ -17,6 +17,8 @@ In search.py, you will implement generic search algorithms which are called by
 Pacman agents (in searchAgents.py).
 """
 
+import copy
+from util import Stack, Queue
 import util
 
 class SearchProblem:
@@ -72,6 +74,37 @@ def tinyMazeSearch(problem):
     w = Directions.WEST
     return  [s, s, w, s, w, w, s, w]
 
+def dfs_recursive(problem, visited, current, path):
+    if current[0] == problem.goal:
+        path.push(current[1])
+        return path.list
+    
+    visited.add(current[0])
+    bestPath = None
+
+    for next in problem.getSuccessors(current[0]):
+        if next[0] in visited: #coord (state)
+            continue
+        
+        newPath = copy.deepcopy(path)
+        if current[1] != "":
+            newPath.push(current[1]) #direction
+
+        newPath = dfs_recursive(problem, visited.copy(), next, newPath) 
+        if newPath is not None:
+            if bestPath is None:
+                bestPath = newPath
+            elif len(bestPath) > len(newPath):
+                bestPath = newPath
+    
+    if bestPath is not None:
+        return bestPath
+
+    visited.remove(current[0])
+
+    return None
+    
+
 def depthFirstSearch(problem):
     """
     Search the deepest nodes in the search tree first.
@@ -87,18 +120,55 @@ def depthFirstSearch(problem):
     print "Start's successors:", problem.getSuccessors(problem.getStartState())
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    visited = set()
+    path = Stack()
+
+    return dfs_recursive(problem, visited, (problem.getStartState(), "", 1), path)
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    queue = Queue()
+    visited = set()
+    
+    root = problem.getStartState()
+
+    # current state, direction, cost, previous stated tuple in queue:
+    queue.push((root, "", 0, None))
+
+    visited.add(root)
+
+    while not queue.isEmpty():
+        current = queue.pop()
+
+        if current[0] == problem.goal:
+            #backtrack path:
+            path = Queue()
+            path.push(current[1])
+
+            backtracked = current[3]
+            while backtracked is not None:
+                if backtracked[1] != "":
+                    path.push(backtracked[1])
+                backtracked = backtracked[3]
+
+            return path.list
+
+        for next in problem.getSuccessors(current[0]):
+            if next[0] in visited: #coord (state)
+                continue
+            
+            queue.push((next[0], next[1], next[2], current))
+            visited.add(next[0])
+
+    return None
+
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
     util.raiseNotDefined()
-
+    
 def nullHeuristic(state, problem=None):
     """
     A heuristic function estimates the cost from the current state to the nearest
